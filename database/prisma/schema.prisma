@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String             @id @default(uuid())
+  email            String             @unique
+  name             String
+  password         String
+  address          String?
+  city             String?
+  state            String?
+  postalCode       String?
+  phone            String?
+  bookings         Booking[]
+  subscriptions    Subscription[]
+  favoriteServices FavoriteService[]
+  favoriteProducts FavoriteProduct[]
+  orders           Order[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model ServiceCategory {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  services Service[]
+}
+
+model Service {
+  id          String           @id @default(uuid())
+  name        String
+  description String
+  imageUrl    String
+  price       Float
+  categoryId  String
+  category    ServiceCategory  @relation(fields: [categoryId], references: [id])
+  bookings    Booking[]
+  favorites   FavoriteService[]
+  timeSlots   TimeSlot[]
+}
+
+model Booking {
+  id         String     @id @default(uuid())
+  userId     String
+  serviceId  String
+  timeSlotId String     @unique
+  user       User       @relation(fields: [userId], references: [id])
+  service    Service    @relation(fields: [serviceId], references: [id])
+  timeSlot   TimeSlot   @relation(fields: [timeSlotId], references: [id])
+  status     String     @default("pending")
+  createdAt  DateTime   @default(now())
+}
+
+model TimeSlot {
+  id         String    @id @default(uuid())
+  day        DateTime  // Date like 2025-05-16
+  startTime  String    // e.g., "10:00 AM"
+  endTime    String    // e.g., "11:00 AM"
+  serviceId  String
+  isBooked   Boolean   @default(false)
+  booking    Booking?  // optional one-to-one
+  service    Service   @relation(fields: [serviceId], references: [id])
+
+  @@unique([day, startTime, endTime, serviceId])
+}
+
+model Subscription {
+  id         String   @id @default(uuid())
+  userId     String
+  planName   String
+  price      Float
+  startDate  DateTime
+  endDate    DateTime
+  isActive   Boolean  @default(true)
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Product {
+  id          String            @id @default(uuid())
+  name        String
+  description String
+  imageUrl    String
+  price       Float
+  favorites   FavoriteProduct[]
+  orderItems  OrderItem[]
+  createdAt   DateTime          @default(now())
+}
+
+model FavoriteService {
+  id         String   @id @default(uuid())
+  userId     String
+  serviceId  String
+  user       User     @relation(fields: [userId], references: [id])
+  service    Service  @relation(fields: [serviceId], references: [id])
+
+  @@unique([userId, serviceId])
+}
+
+model FavoriteProduct {
+  id         String   @id @default(uuid())
+  userId     String
+  productId  String
+  user       User     @relation(fields: [userId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  userId      String
+  totalAmount Float
+  status      String      @default("pending") // pending, paid, shipped, delivered
+  createdAt   DateTime    @default(now())
+  user        User        @relation(fields: [userId], references: [id])
+  orderItems  OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  productId  String
+  quantity   Int
+  price      Float
+  order      Order    @relation(fields: [orderId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+}
